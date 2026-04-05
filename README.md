@@ -14,7 +14,7 @@ pip install coral-lang
 Or install from source:
 
 ```bash
-git clone https://github.com/your-org/coral-lang
+git clone https://github.com/Mr-Regretment/Coral-Language
 cd coral-lang
 pip install .
 ```
