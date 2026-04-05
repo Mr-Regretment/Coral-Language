@@ -1,0 +1,172 @@
+// showcase.coral — Full Coral language showcase
+// Classes, inheritance, multiple inheritance, for/foreach, conditions, numpy
+
+import numpy as np;
+
+// ── Base class ──────────────────────────────────────────────────────────────
+
+public class DataAnalyzer {
+    protected str         label;
+    protected list<float> data;
+
+    public void __init__(str label, list<float> data) {
+        self.label = label;
+        self.data  = data;
+    }
+
+    public float getMean()   { return np.mean(self.data);   }
+    public float getStd()    { return np.std(self.data);    }
+    public float getMin()    { return np.min(self.data);    }
+    public float getMax()    { return np.max(self.data);    }
+    public float getMedian() { return np.median(self.data); }
+
+    public int countAbove(float threshold) {
+        int tally = 0;
+        for(int i = 0; i < len(self.data); i++) {
+            if(self.data[i] > threshold) {
+                tally++;
+            }
+        }
+        return tally;
+    }
+
+    public list<float> outliers(float zThresh) {
+        float mu    = self.getMean();
+        float sigma = self.getStd();
+        list<float> found = [];
+        foreach(float v in self.data) {
+            float z = abs(v - mu) / sigma;
+            if(z > zThresh) {
+                found.append(v);
+            }
+        }
+        return found;
+    }
+
+    public void summarise() {
+        print("┌─────────────────────────────────┐");
+        print("│ " + self.label);
+        print("├─────────────────────────────────┤");
+        print("│ N      : " + str(len(self.data)));
+        print("│ Mean   : " + str(round(self.getMean(),   3)));
+        print("│ Median : " + str(round(self.getMedian(), 3)));
+        print("│ Std    : " + str(round(self.getStd(),    3)));
+        print("│ Min    : " + str(self.getMin()));
+        print("│ Max    : " + str(self.getMax()));
+        print("└─────────────────────────────────┘");
+    }
+}
+
+// ── Normalisation mixin ─────────────────────────────────────────────────────
+
+public class Normalisable {
+    public void __init__() {
+        self._normed = [];
+    }
+
+    public list<float> normalise(list<float> raw) {
+        float mn  = np.min(raw);
+        float mx  = np.max(raw);
+        float rng = mx - mn;
+        list<float> out = [];
+        foreach(float v in raw) {
+            out.append(round((v - mn) / rng, 4));
+        }
+        return out;
+    }
+}
+
+// ── Subclass: inherits DataAnalyzer + Normalisable ──────────────────────────
+
+public class NormalisedAnalyzer extends DataAnalyzer, Normalisable {
+    private list<float> normed;
+
+    public void __init__(str label, list<float> data) {
+        DataAnalyzer.__init__(self, label, data);
+        Normalisable.__init__(self);
+        self.normed = self.normalise(data);
+    }
+
+    public float getNormedMean()   { return round(np.mean(self.normed), 4);   }
+    public float getNormedStd()    { return round(np.std(self.normed),  4);   }
+
+    @Override
+    public void summarise() {
+        super();
+        print("  Normed mean : " + str(self.getNormedMean()));
+        print("  Normed std  : " + str(self.getNormedStd()));
+    }
+}
+
+// ── Grading helper ──────────────────────────────────────────────────────────
+
+public class GradeBook extends NormalisedAnalyzer {
+    private list<str> names;
+
+    public void __init__(str label, list<str> names, list<float> scores) {
+        super(label, scores);
+        self.names = names;
+    }
+
+    public str letterGrade(float score) {
+        if(score >= 90.0) {
+            return "A";
+        } else if(score >= 80.0) {
+            return "B";
+        } else if(score >= 70.0) {
+            return "C";
+        } else if(score >= 60.0) {
+            return "D";
+        } else {
+            return "F";
+        }
+    }
+
+    public void printRoster() {
+        print("\nGrade Roster:");
+        print("─────────────────────────────────────");
+        for(int i = 0; i < len(self.names); i++) {
+            float  score  = self.data[i];
+            str    grade  = self.letterGrade(score);
+            str    line   = self.names[i] + " → " + str(score) + " (" + grade + ")";
+            print(line);
+        }
+        print("─────────────────────────────────────");
+    }
+
+    public void topStudents(int n) {
+        list<float> sorted_scores = sorted(self.data, reverse=True);
+        list<float> top           = sorted_scores[:n];
+        print("\nTop " + str(n) + " scores: " + str(top));
+    }
+}
+
+// ── Entry point ─────────────────────────────────────────────────────────────
+
+public void main() {
+    list<str> students = [
+        "Alice", "Bob", "Carol", "Dave", "Eve",
+        "Frank", "Grace", "Hiro", "Isla", "Jack"
+    ];
+
+    list<float> scores = [92.5, 78.0, 85.5, 61.0, 94.0,
+                          73.5, 88.0, 55.0, 91.5, 67.0];
+
+    GradeBook gb = new GradeBook("Year 1 Exam Results", students, scores);
+
+    gb.summarise();
+    gb.printRoster();
+    gb.topStudents(3);
+
+    int above80 = gb.countAbove(80.0);
+    print("\nStudents scoring above 80: " + str(above80));
+
+    list<float> found = gb.outliers(1.2);
+    if(len(found) > 0) {
+        print("Outlier scores (|z| > 1.2): " + str(found));
+    } else {
+        print("No outliers detected.");
+    }
+}
+
+main();
